@@ -43,27 +43,48 @@ fun MainScreen() {
     val context = LocalContext.current
     val decibelLevel = remember { mutableStateOf(50.0) }
 
-    // Lese den eingestellten Schwellenwert aus den SharedPreferences (Standard: 85 dB)
+    // Lese den eingestellten Schwellenwert aus SharedPreferences (Standard: 85 dB)
     val sharedPreferences = context.getSharedPreferences("SoundSafePrefs", Context.MODE_PRIVATE)
     val noiseLimit = sharedPreferences.getInt("NOISE_LIMIT", 85)
 
-    // Mikrofon-Berechtigung anfordern
-    val requestPermissionLauncher = rememberLauncherForActivityResult(
+    // Launcher für RECORD_AUDIO-Berechtigung
+    val recordAudioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
             if (isGranted) {
                 startNoiseService(context)
+            } else {
+                Log.d("MainActivity", "RECORD_AUDIO permission denied.")
+            }
+        }
+    )
+
+    // Launcher für POST_NOTIFICATIONS-Berechtigung (Android 13+)
+    val postNotificationsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (!isGranted) {
+                Log.d("MainActivity", "POST_NOTIFICATIONS permission denied.")
             }
         }
     )
 
     LaunchedEffect(Unit) {
+        // RECORD_AUDIO-Berechtigung prüfen und anfragen
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
             == PackageManager.PERMISSION_GRANTED
         ) {
             startNoiseService(context)
         } else {
-            requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+        // POST_NOTIFICATIONS-Berechtigung (ab Android 13) prüfen und anfragen
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                postNotificationsPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
 
@@ -138,7 +159,6 @@ fun MainScreen() {
     }
 }
 
-// Funktion zum Starten des Services
 private fun startNoiseService(context: Context) {
     val intent = Intent(context, NoiseService::class.java)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
