@@ -1,46 +1,149 @@
-package com.example.soundsafe
+package com.example.soundsafe.ui
 
+import android.Manifest
+import android.content.*
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import com.example.soundsafe.service.NoiseService
 import com.example.soundsafe.ui.theme.SoundSafeTheme
+import android.util.Log
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             SoundSafeTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                MainScreen()
             }
         }
     }
 }
+
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
+fun MainScreen() {
+    val context = LocalContext.current
+    val decibelLevel = remember { mutableStateOf(50.0) }
+
+    // Lese den eingestellten Schwellenwert aus den SharedPreferences (Standard: 85 dB)
+    val sharedPreferences = context.getSharedPreferences("SoundSafePrefs", Context.MODE_PRIVATE)
+    val noiseLimit = sharedPreferences.getInt("NOISE_LIMIT", 85)
+
+    // Mikrofon-Berechtigung anfordern
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                startNoiseService(context)
+            }
+        }
     )
+
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            startNoiseService(context)
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    // BroadcastReceiver für Dezibel-Updates
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val decibels = intent?.getDoubleExtra("DECIBEL_VALUE", 0.0) ?: 0.0
+                decibelLevel.value = decibels
+                Log.d("MainActivity", "Received decibels: $decibels")
+            }
+        }
+        val filter = IntentFilter("UPDATE_DECIBEL")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+        onDispose {
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (e: Exception) {
+                // Receiver wurde bereits abgemeldet
+            }
+        }
+    }
+
+    // UI Layout
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "${decibelLevel.value.toInt()} dB",
+                fontSize = 50.sp,
+                color = Color.White
+            )
+            // Zeige Warnmeldung in der UI an, wenn der gemessene Wert den Schwellenwert überschreitet
+            if (decibelLevel.value.toInt() > noiseLimit) {
+                Text(
+                    text = "Warnung: Es ist zu laut!",
+                    fontSize = 20.sp,
+                    color = Color.Red,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Einstellungen",
+                tint = Color.White,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable {
+                        context.startActivity(Intent(context, SettingsActivity::class.java))
+                    }
+            )
+        }
+    }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    SoundSafeTheme {
-        Greeting("Android")
+// Funktion zum Starten des Services
+private fun startNoiseService(context: Context) {
+    val intent = Intent(context, NoiseService::class.java)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        context.startForegroundService(intent)
+    } else {
+        context.startService(intent)
     }
 }
