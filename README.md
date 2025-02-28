@@ -29,6 +29,11 @@ Die Linter-Berichte findest du hier:
 
 Ich hatte Schwierigkeiten mit dem zugriff auf das Mikrofon und das anzeigen, des richtigen dB Wert. Es ging nicht, da ich irgendwie keinen Zugriff auf das Mikrofon gelangen konnte, jedoch hat dies nach einer weile recherchieren und ausprobieren irgendwann geklappt.
 
+## Versionierung
+
+Ich habe während des Projektes ein Git Repo geführt:
+https://github.com/Mustafa-Sagaaro/SoundSafe
+
 ## Quellen
 
 Bei der Entwicklung der App habe ich folgende Quellen genutzt:
@@ -44,3 +49,5 @@ https://stackoverflow.com/questions/45605083/android-vibrate-is-deprecated-how-t
 
 - Chatgpt:
 Ich habe Chat gpt als Hilfe genutzt in diesem Projekt, vorallem um Dinge zu verstehen die ich Online nicht finden konnte. Chat gpt hat mir vorallem bei der Fehlerbehebung und Verständnis für Code geholfen. Genutzt habe ich Chatgpt für die Hintergrund Funktion und das senden von Nachrichten.
+
+
