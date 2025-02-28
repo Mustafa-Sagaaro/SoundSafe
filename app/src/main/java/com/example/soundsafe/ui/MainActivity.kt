@@ -84,7 +84,7 @@ fun MainScreen() {
         } else {
             recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
-        // POST_NOTIFICATIONS (Android 13+)
+        // POST_NOTIFICATIONS
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
@@ -113,7 +113,6 @@ fun MainScreen() {
             try {
                 context.unregisterReceiver(receiver)
             } catch (e: Exception) {
-                // Ignoriere, wenn der Receiver schon abgemeldet ist
             }
         }
     }
@@ -124,7 +123,6 @@ fun MainScreen() {
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Settings-Icon oben rechts
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -143,26 +141,21 @@ fun MainScreen() {
             )
         }
 
-        // Inhalt in der Mitte
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Top,  // oder SpaceEvenly/SpaceAround
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Abstand nach oben
             Spacer(modifier = Modifier.height(100.dp))
 
-            // 1) Gauge oben
             NoiseGauge(
                 decibelValue = decibelLevel.value.toFloat(),
                 limitValue = noiseLimit.toFloat(),
                 gaugeSize = 300.dp
             )
 
-            // 2) Abstand zwischen Gauge und Text
             Spacer(modifier = Modifier.height(40.dp))
 
-            // 3) Zahl + "dB" weiter unten
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = decibelLevel.value.roundToInt().toString(),
@@ -177,7 +170,6 @@ fun MainScreen() {
                 )
             }
 
-            // 4) Warnmeldung (optional)
             if (decibelLevel.value > noiseLimit) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -190,10 +182,6 @@ fun MainScreen() {
     }
 }
 
-/**
- * Zeichnet nur den halbkreisförmigen Gauge.
- * Kein Text! Damit du die Zahl flexibel darunter platzieren kannst.
- */
 @Composable
 fun NoiseGauge(
     decibelValue: Float,
@@ -208,10 +196,8 @@ fun NoiseGauge(
             val strokeWidth = 24f
             val radius = min(size.width, size.height) / 2f - strokeWidth
 
-            // Wir verschieben das Zentrum nach unten, damit es ein Bogen "oben offen" ist
             val centerArc = center.copy(y = center.y + radius)
 
-            // Hintergrundbogen
             drawArc(
                 color = Color.DarkGray,
                 startAngle = 180f,
@@ -222,14 +208,12 @@ fun NoiseGauge(
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
 
-            // Bestimme den Fortschritt (maxValue mind. 100)
             val maxValue = limitValue.coerceAtLeast(100f)
             val progress = (decibelValue / maxValue).coerceIn(0f, 1f)
             val sweep = 180f * progress
 
             val gaugeColor = if (decibelValue <= limitValue) Color(0xFFB388FF) else Color.Red
 
-            // Gefüllter Bogen
             drawArc(
                 color = gaugeColor,
                 startAngle = 180f,

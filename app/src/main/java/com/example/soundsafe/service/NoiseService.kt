@@ -26,13 +26,12 @@ class NoiseService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // START_STICKY: Der Service bleibt im Hintergrund aktiv und wird ggf. vom System neu gestartet.
+        // Der Service bleibt im Hintergrund aktiv
         return START_STICKY
     }
 
     /**
      * Erstellt die Low-Priority-Notification für den Foreground Service,
-     * damit die App auch im Hintergrund weiterläuft.
      */
     private fun startForegroundServiceNotification() {
         val channelId = "NoiseServiceChannel"
@@ -40,7 +39,7 @@ class NoiseService : Service() {
             val channel = NotificationChannel(
                 channelId,
                 "Noise Monitoring",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
             )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
@@ -56,7 +55,7 @@ class NoiseService : Service() {
     }
 
     /**
-     * Hier wird in einer Endlosschleife der aktuelle dB-Wert über MediaRecorder ermittelt.
+     * der aktuelle dB-Wert über MediaRecorder ermittelt.
      */
     private fun startNoiseMonitoring() {
         try {
@@ -91,7 +90,7 @@ class NoiseService : Service() {
                     }
                     sendBroadcast(intent)
 
-                    // Schwellenwert aus SharedPreferences lesen
+                    // Limit aus SharedPreferences lesen
                     val sharedPreferences = getSharedPreferences("SoundSafePrefs", MODE_PRIVATE)
                     val noiseLimit = sharedPreferences.getInt("NOISE_LIMIT", 85)
 
@@ -128,7 +127,6 @@ class NoiseService : Service() {
         val channelId = "WarningChannel"
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Ab Android O+ muss der Channel eine hohe Wichtigkeit haben, damit Heads-up erscheinen kann.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
@@ -145,11 +143,8 @@ class NoiseService : Service() {
             .setContentTitle("Warnung!")
             .setContentText("Das Lautstärke-Limit wurde überschritten.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            // Ab Android Lollipop (API 21) kann CATEGORY_ALARM helfen, die Heads-up anzuzeigen.
             .setCategory(Notification.CATEGORY_ALARM)
-            // Ton oder Standard-Benachrichtigungseinstellungen
             .setDefaults(NotificationCompat.DEFAULT_ALL)
-            // Damit die Notification „Heads-up“ ist
             .setAutoCancel(true)
 
         // Optionale Farbe für den Titel oder Icon-Hintergrund
